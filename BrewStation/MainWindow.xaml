@@ -1,0 +1,43 @@
+﻿<Window x:Class="BrewStation.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:db="clr-namespace:Codeplex.Dashboarding;assembly=Codeplex.Dashboarding"
+        Title="Brew Station" Height="335" Width="415" ResizeMode="NoResize"
+        x:Name="_this">
+    <Grid Margin="0,0,2,-20">
+        <GroupBox Header="Temperatures" HorizontalAlignment="Left" Margin="22,22,0,0" VerticalAlignment="Top" Height="174" Width="364"/>
+
+
+        <Label Content="Boil Kettle:" HorizontalAlignment="Left" Margin="60,86,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="bkTemp" Content="{Binding ElementName=_this, Path=KettleTemperatures.BoilKettleTemperature}" HorizontalAlignment="Left" Margin="143,86,0,0" VerticalAlignment="Top"/>
+        <Label Content="MT" HorizontalAlignment="Left" Margin="60,117,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="mtTemp" Content="{Binding ElementName=_this, Path=KettleTemperatures.MashTunTemperature}" HorizontalAlignment="Left" Margin="143,117,0,0" VerticalAlignment="Top"/>
+        <Label Content="HLT" HorizontalAlignment="Left" Margin="60,148,0,0" VerticalAlignment="Top"/>
+        <Label x:Name="hltTemp" Content="{Binding ElementName=_this, Path=KettleTemperatures.HotLiquorTankTemperature}" HorizontalAlignment="Left" Margin="143,148,0,0" VerticalAlignment="Top"/>
+        <Label Content="Current" HorizontalAlignment="Left" Margin="143,55,0,0" VerticalAlignment="Top"/>
+        <Label Content="Set" HorizontalAlignment="Left" Margin="219,55,0,0" VerticalAlignment="Top"/>
+        <TextBox x:Name="mtSetTemp" HorizontalAlignment="Left" Height="23" Margin="219,117,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="61"/>
+        <TextBox x:Name="hltSetTemp" HorizontalAlignment="Left" Height="23" Margin="219,151,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="61"/>
+        <Button Name="mtStart" Content="Start" HorizontalAlignment="Left" Margin="300,118,0,0" VerticalAlignment="Top" Width="43" Click="mtStart_Click"/>
+        <Button Name="hltStart" Content="Start" HorizontalAlignment="Left" Margin="300,152,0,0" VerticalAlignment="Top" Width="43" Click="hltStart_Click"/>
+        <GroupBox Header="Burners" HorizontalAlignment="Left" Margin="22,201,0,0" VerticalAlignment="Top" Height="84" Width="171">
+            <Grid Margin="2,0,-2,0">
+                <CheckBox Name="mtBurner" Content="MT" HorizontalAlignment="Left" Margin="31,10,0,0" VerticalAlignment="Top" Click="mtBurner_Click" />
+                <CheckBox Name="hltBurner" Content="HLT" HorizontalAlignment="Left" Margin="31,31,0,0" VerticalAlignment="Top" Click="hltBurner_Click"/>
+
+
+            </Grid>
+        </GroupBox>
+        <GroupBox Header="Pumps" HorizontalAlignment="Left" Margin="198,201,0,0" VerticalAlignment="Top" Height="84" Width="188">
+            <Grid>
+                <CheckBox Name="pump1" Content="Pump 1" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,10,0,0" Click="pump1_Click"/>
+                <CheckBox Name="pump2" Content="Pump 2" HorizontalAlignment="Left" Margin="10,32,0,0" VerticalAlignment="Top" Click="pump2_Click"/>
+
+            </Grid>
+        </GroupBox>
+
+
+
+    </Grid>
+
+</Window>
