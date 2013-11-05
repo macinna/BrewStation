@@ -22,6 +22,26 @@ namespace BrewStation
 
         }
 
+        public static bool InitializeRelays()
+        {
+            int model = 0;
+            StringBuilder firmware = new StringBuilder(128);
+            bool success = false;
+            try
+            {
+                if(PwrUSBWrapper.InitPowerUSB(out model, firmware) < 2)
+                {
+                    success = true;
+                }
+            }
+            catch
+            {
+                success = false;
+            }
+
+            return success;
+        }
+
         private static void ModifyRelay(Relays relay, bool open)
         {
             lock (thisLock)

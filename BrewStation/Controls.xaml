@@ -1,10 +1,9 @@
-﻿<Window x:Class="BrewStation.MainWindow"
+﻿<Window x:Class="BrewStation.Controls"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Controls" Height="656" Width="525"
         xmlns:db="clr-namespace:Codeplex.Dashboarding;assembly=Codeplex.Dashboarding" SizeToContent="WidthAndHeight"
-        xmlns:ToggleSwitch="clr-namespace:ToggleSwitch;assembly=ToggleSwitch"
-        x:Name="_this">
+        xmlns:ToggleSwitch="clr-namespace:ToggleSwitch;assembly=ToggleSwitch">
 
     <DockPanel>
         <StatusBar Margin="0,3,0,0" DockPanel.Dock="Bottom" >
@@ -54,9 +53,9 @@
                                Margin="0,5"
                                Grid.Column="2"
                                Grid.Row="0"/>
-                    <db:Dial360 Grid.Column="0" Grid.Row="1" Minimum="50" Maximum="250" Value="{Binding ElementName=_this, Path=KettleTemperatures.BoilKettleTemperature}" Name="BoilKettleDial" />
-                    <db:Dial360 Grid.Column="1" Grid.Row="1" Minimum="50" Maximum="250" Value="{Binding ElementName=_this, Path=KettleTemperatures.MashTunTemperature}" Name="MashTunDial"/>
-                    <db:Dial360 Grid.Column="2" Grid.Row="1" Minimum="50" Maximum="250" Value="{Binding ElementName=_this, Path=KettleTemperatures.HotLiquorTankTemperature}" Name="HotLiquorTankDial"/>
+                    <db:Dial360 Grid.Column="0" Grid.Row="1" Minimum="50" Maximum="250" Value="72" />
+                    <db:Dial360 Grid.Column="1" Grid.Row="1" Minimum="50" Maximum="250" Value="72" />
+                    <db:Dial360 Grid.Column="2" Grid.Row="1" Minimum="50" Maximum="250" Value="72" />
                 </Grid>
             </GroupBox>
 
@@ -81,30 +80,25 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock 
-                                Text="Set Point" 
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Margin="10,10,10,10" />
-                            <TextBox Grid.Column="1" Grid.Row="0" Height="25" Name="MashTunSetPoint" />
+                        Text="Set Point" 
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        Margin="10,10,10,10"/>
+                            <TextBox Grid.Column="1" Grid.Row="0" Height="25" />
                             <TextBlock 
-                                Text="Regulate" 
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Grid.Row="1"
-                                Grid.Column="0" Margin="10,10,10,10"/>
+                        Text="Regulate" 
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Grid.Row="1"
+                        Grid.Column="0" Margin="10,10,10,10"/>
                             <ToggleSwitch:HorizontalToggleSwitch 
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                IsChecked="False"
-                                HorizontalAlignment="Left" 
-                                VerticalAlignment="Center"
-                                Name="RegulateMashTunSwitch"
-                                Checked="RegulateMashTunSwitch_Changed"
-                                Unchecked="RegulateMashTunSwitch_Changed"
-                                
-                                />
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        IsChecked="False"
+                        HorizontalAlignment="Left" 
+                        VerticalAlignment="Center"/>
                         </Grid>
                     </GroupBox>
                     <GroupBox Grid.Row="0" Grid.Column="1" Margin="5,5,5,5" Header="Hot Liquor Tank">
@@ -118,28 +112,25 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <TextBlock 
-                                Text="Set Point" 
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Grid.Row="0"
-                                Grid.Column="0"
-                                Margin="10,10,10,10"/>
-                            <TextBox Grid.Column="1" Grid.Row="0" Height="25" Name="HotLiquorTankSetPoint" />
+                        Text="Set Point" 
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Grid.Row="0"
+                        Grid.Column="0"
+                        Margin="10,10,10,10"/>
+                            <TextBox Grid.Column="1" Grid.Row="0" Height="25" />
                             <TextBlock 
-                                Text="Regulate" 
-                                HorizontalAlignment="Left"
-                                VerticalAlignment="Center"
-                                Grid.Row="1"
-                                Grid.Column="0" Margin="10,10,10,10"/>
+                        Text="Regulate" 
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Grid.Row="1"
+                        Grid.Column="0" Margin="10,10,10,10"/>
                             <ToggleSwitch:HorizontalToggleSwitch 
-                                Grid.Row="1"
-                                Grid.Column="1"
-                                IsChecked="False"
-                                HorizontalAlignment="Left" 
-                                VerticalAlignment="Center"
-                                Name="RegulateHotLiquorTankSwitch"
-                                Checked="RegulateHotLiquorTankSwitch_Changed"
-                                Unchecked="RegulateHotLiquorTankSwitch_Changed"/>
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        IsChecked="False"
+                        HorizontalAlignment="Left" 
+                        VerticalAlignment="Center"/>
                         </Grid>
                     </GroupBox>
 
@@ -170,11 +161,7 @@
                         Grid.Column="1"
                         IsChecked="False"
                         HorizontalAlignment="Left" 
-                        VerticalAlignment="Center"
-                        Name="MashTunBurnerSwitch"
-                        Checked="MashTunBurnerSwitch_Changed"
-                        Unchecked="MashTunBurnerSwitch_Changed"
-                        />
+                        VerticalAlignment="Center"/>
                     <TextBlock 
                         Text="Hot Liquor Tank" 
                         HorizontalAlignment="Left"
@@ -186,10 +173,7 @@
                         Grid.Column="1"
                         IsChecked="False"
                         HorizontalAlignment="Left" 
-                        VerticalAlignment="Center"
-                        Name="HotLiquorTankBurnerSwitch"
-                        Checked="HotLiquorTankBurnerSwitch_Changed"
-                        Unchecked="HotLiquorTankBurnerSwitch_Changed"/>
+                        VerticalAlignment="Center"/>
                 </Grid>
             </GroupBox>
             <GroupBox Grid.Row="2" Grid.Column="1" Margin="5,5,5,5">
@@ -217,10 +201,7 @@
                         Grid.Column="1"
                         IsChecked="False"
                         HorizontalAlignment="Left" 
-                        VerticalAlignment="Center"
-                        Name="LeftPumpSwitch"
-                        Checked="LeftPumpSwitch_Changed"
-                        Unchecked="LeftPumpSwitch_Changed"/>
+                        VerticalAlignment="Center"/>
                     <TextBlock 
                         Text="Right" 
                         HorizontalAlignment="Left"
@@ -232,10 +213,7 @@
                         Grid.Column="1"
                         IsChecked="False"
                         HorizontalAlignment="Left" 
-                        VerticalAlignment="Center"
-                        Name="RightPumpSwitch"
-                        Checked="RightPumpSwitch_Changed"
-                        Unchecked="RightPumpSwitch_Changed"/>
+                        VerticalAlignment="Center"/>
                 </Grid>
             </GroupBox>
 

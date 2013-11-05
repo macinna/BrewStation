@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using HidLibrary;
+using System.Configuration;
 
 using System.Diagnostics;
 
@@ -28,23 +29,32 @@ namespace BrewStation
             {
 
                 int tempDeviceIndex = 1;
+                double scaleFactor = 1.0;
+                double offset = 1.0;
 
                 switch (probe)
                 {
                     case TemperatureProbes.HotLiquorTank:
                         tempDeviceIndex = 3;
+                        scaleFactor = Convert.ToDouble(ConfigurationSettings.AppSettings["HLTTempScaleFactor"]);
+                        offset = Convert.ToDouble(ConfigurationSettings.AppSettings["HLTTempOffset"]);
                         break;
                     case TemperatureProbes.MashTun:
                         tempDeviceIndex = 4;
+                        scaleFactor = Convert.ToDouble(ConfigurationSettings.AppSettings["MTTempScaleFactor"]);
+                        offset = Convert.ToDouble(ConfigurationSettings.AppSettings["MTTempOffset"]);
+
                         break;
                     case TemperatureProbes.BoilKettle:
+                        scaleFactor = Convert.ToDouble(ConfigurationSettings.AppSettings["BKTempScaleFactor"]);
+                        offset = Convert.ToDouble(ConfigurationSettings.AppSettings["BKTempOffset"]);
+                        
                         tempDeviceIndex = 5;
                         break;
                 }
 
 
                 int counter = 0;
-                int temp = 0;
                 foreach (HidDevice device in devices)
                 {
                     if (counter == tempDeviceIndex)
@@ -59,15 +69,26 @@ namespace BrewStation
 
                         if (data.Data[3] > 0)
                         {
-                            temp = (int)(data.Data[3] + ((float)data.Data[4]) / 256);
-                            temp = (int)(((data.Data[3] * 16) + (data.Data[4] / 16)) * 0.1125) + 32;
+                            double rawTemp = data.Data[3] + ((double)data.Data[4]) / 256;
+                            double calibrated = rawTemp * scaleFactor + offset;
+                            
+                            Debug.WriteLine( String.Format("{0}:  {1:0.00}", probe, calibrated));
+                            //temp = (int)(data.Data[3] + ((float)data.Data[4]) / 256);
+
+                            double tempF = calibrated * 9.0 / 5.0 + 32;
+
+                            
+
+                            //return in degrees farenheit rounded to nearest int
+                            return (int) Math.Round(tempF, 0);
                         }
                     }
                     counter++;
                 }
 
-                return temp;
             }
+
+            return 0;
         }
     }
 }

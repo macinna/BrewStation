@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using System.ComponentModel;
 using System.Threading;
 using System.Collections.Concurrent;
+using ToggleSwitch;
 
 namespace BrewStation
 {
@@ -39,7 +40,16 @@ namespace BrewStation
         {
 
             InitializeComponent();
+
+            if (!RelayController.InitializeRelays())
+            {
+                //relay initialization failure
+                //nothing should happen now.  
+                
+            }
+
             MonitorAndUpdateTemperatureDisplays();
+            
         }
 
         public Temperatures KettleTemperatures
@@ -69,7 +79,7 @@ namespace BrewStation
         }
 
 
-        private void mtStart_Click(object sender, RoutedEventArgs e)
+        private void RegulateMashTunSwitch_Changed(object sender, RoutedEventArgs e)
         {
             //start process to regulate temperature of mt
 
@@ -78,12 +88,11 @@ namespace BrewStation
                 MTRegulatorCancellationTokenSource = new CancellationTokenSource();
                 CancellationToken token = MTRegulatorCancellationTokenSource.Token;
 
-                int desiredTemp = Convert.ToInt32(mtSetTemp.Text);
+                int desiredTemp = Convert.ToInt32(MashTunSetPoint.Text);
                 MTRegulatorTask = Task.Factory.StartNew(() => RegulateTemperature(Kettles.MashTun, desiredTemp, token), token);
 
-                mtStart.Content = "Stop";
-                mtBurner.IsEnabled = false;
-                mtSetTemp.IsEnabled = false;
+                MashTunBurnerSwitch.IsEnabled = false;
+                MashTunSetPoint.IsEnabled = false;
                 mtRegulationRunning = true;
 
             }
@@ -93,9 +102,8 @@ namespace BrewStation
                 ConcurrentBag<Task> tasks = new ConcurrentBag<Task>();
                 tasks.Add(MTRegulatorTask);
                 Task.WaitAll(tasks.ToArray());
-                mtStart.Content = "Start";
-                mtBurner.IsEnabled = true;
-                mtSetTemp.IsEnabled = true;
+                MashTunBurnerSwitch.IsEnabled = true;
+                MashTunSetPoint.IsEnabled = true;
                 mtRegulationRunning = false;
             }
 
@@ -103,7 +111,7 @@ namespace BrewStation
         }
 
 
-        private void hltStart_Click(object sender, RoutedEventArgs e)
+        private void RegulateHotLiquorTankSwitch_Changed(object sender, RoutedEventArgs e)
         {
             //start process to regulate temperature of hlt
 
@@ -112,12 +120,11 @@ namespace BrewStation
                 HLTRegulatorCancellationTokenSource = new CancellationTokenSource();
                 CancellationToken token = HLTRegulatorCancellationTokenSource.Token;
                 
-                int desiredTemp = Convert.ToInt32(hltSetTemp.Text);
+                int desiredTemp = Convert.ToInt32(HotLiquorTankSetPoint.Text);
                 HLTRegulatorTask = Task.Factory.StartNew(() => RegulateTemperature(Kettles.HotLiquorTank, desiredTemp, token), token);
-
-                hltStart.Content = "Stop";                
-                hltBurner.IsEnabled = false;
-                hltSetTemp.IsEnabled = false;
+             
+                HotLiquorTankBurnerSwitch.IsEnabled = false;
+                HotLiquorTankSetPoint.IsEnabled = false;
                 hltRegulationRunning = true;
 
             }
@@ -127,9 +134,8 @@ namespace BrewStation
                 ConcurrentBag<Task> tasks = new ConcurrentBag<Task>();
                 tasks.Add(HLTRegulatorTask);
                 Task.WaitAll(tasks.ToArray());
-                hltStart.Content = "Start";
-                hltBurner.IsEnabled = true;
-                hltSetTemp.IsEnabled = true;
+                HotLiquorTankBurnerSwitch.IsEnabled = true;
+                HotLiquorTankSetPoint.IsEnabled = true;
                 hltRegulationRunning = false;
             }
 
@@ -141,19 +147,21 @@ namespace BrewStation
 
             Relays relay = Relays.MashTunBurner;
             TemperatureProbes probe = TemperatureProbes.MashTun;
-            CheckBox burnerCheckBox = null;
+            HorizontalToggleSwitch burnerSwitch = null;
+
+            double target = Convert.ToDouble(targetTemp);
 
             switch (kettle)
             {
                 case Kettles.HotLiquorTank:
                     relay = Relays.HotLiquorTankBurner;
                     probe = TemperatureProbes.HotLiquorTank;
-                    burnerCheckBox = hltBurner;
+                    burnerSwitch = HotLiquorTankBurnerSwitch;
                     break;
                 case Kettles.MashTun:
                     relay = Relays.MashTunBurner;
                     probe = TemperatureProbes.MashTun;
-                    burnerCheckBox = mtBurner;
+                    burnerSwitch = MashTunBurnerSwitch;
                     break;
             }
 
@@ -166,7 +174,7 @@ namespace BrewStation
                     //get temp from UI thread since it's already being monitored over there, 
                     //and we'd like the timing of the regulator to match the temp in the UI
 
-                    int currentTemp = 0;
+                    double currentTemp = 0.0;
 
                     this.Dispatcher.Invoke(new Action(() =>
                     {
@@ -178,21 +186,21 @@ namespace BrewStation
                     }), null);
 
 
-                    if (currentTemp < targetTemp)
+                    if (currentTemp < target)
                     {
                         //Turn on the buner
                         RelayController.CloseRelay(relay);
 
 
                         //update the UI
-                        this.Dispatcher.BeginInvoke(new Action(() => burnerCheckBox.IsChecked = true), null);
+                        this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = true), null);
                         
                     }
                     else
                     {
                         //Turn off the buner
                         RelayController.OpenRelay(relay);
-                        this.Dispatcher.BeginInvoke(new Action(() => burnerCheckBox.IsChecked = false), null);
+                        this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = false), null);
                     }
 
                     Thread.Sleep(1000);
@@ -209,44 +217,44 @@ namespace BrewStation
             {
                 //clean up by opening relays to turn off buner
                 RelayController.OpenRelay(relay);
-                this.Dispatcher.BeginInvoke(new Action(() => burnerCheckBox.IsChecked = false), null);
+                this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = false), null);
             }
 
         }
 
 
-        private void mtBurner_Click(object sender, RoutedEventArgs e)
+        private void MashTunBurnerSwitch_Changed(object sender, RoutedEventArgs e)
         {
-            if (mtBurner.IsChecked == true)
+            if (MashTunBurnerSwitch.IsChecked == true)
                 RelayController.CloseRelay(Relays.MashTunBurner);
             else
                 RelayController.OpenRelay(Relays.MashTunBurner);
         }
 
-        private void hltBurner_Click(object sender, RoutedEventArgs e)
+        private void HotLiquorTankBurnerSwitch_Changed(object sender, RoutedEventArgs e)
         {
             
-            if (hltBurner.IsChecked == true)
+            if (HotLiquorTankBurnerSwitch.IsChecked == true)
                 RelayController.CloseRelay(Relays.HotLiquorTankBurner);
             else
                 RelayController.OpenRelay(Relays.HotLiquorTankBurner);
 
         }
 
-        private void pump1_Click(object sender, RoutedEventArgs e)
+        private void LeftPumpSwitch_Changed(object sender, RoutedEventArgs e)
         {
 
 
-            if (pump1.IsChecked == true)
+            if (LeftPumpSwitch.IsChecked == true)
                 RelayController.CloseRelay(Relays.Pump1);
             else
                 RelayController.OpenRelay(Relays.Pump1);
 
         }
 
-        private void pump2_Click(object sender, RoutedEventArgs e)
+        private void RightPumpSwitch_Changed(object sender, RoutedEventArgs e)
         {
-            if (pump2.IsChecked == true)
+            if (RightPumpSwitch.IsChecked == true)
                 RelayController.CloseRelay(Relays.Pump2);
             else
                 RelayController.OpenRelay(Relays.Pump2);
