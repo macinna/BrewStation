@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 
 namespace BrewStation
 {
-    enum Relays
+    public enum Relays
     {
         HotLiquorTankBurner,
         MashTunBurner,
         Pump1,
-        Pump2
+        Pump2,
+        All
     }
 }

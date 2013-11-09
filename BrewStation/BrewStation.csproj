@@ -63,11 +63,14 @@
       <DependentUpon>Controls.xaml</DependentUpon>
     </Compile>
     <Compile Include="Kettles.cs" />
-    <Compile Include="RelayController.cs" />
+    <Compile Include="OneWireTemperatureReader.cs" />
+    <Compile Include="PwrUSBRelayController.cs" />
     <Compile Include="PwrUSBWrapper.cs" />
+    <Compile Include="RelayController.cs" />
     <Compile Include="Relays.cs" />
-    <Compile Include="TempControllerEventArgs.cs" />
-    <Compile Include="TemperatrureUtil.cs" />
+    <Compile Include="TemperatureReader.cs" />
+    <Compile Include="TinyOSRelayController.cs" />
+    <Compile Include="USBTemperatureReader.cs" />
     <Compile Include="TemperatureProbes.cs" />
     <Compile Include="Temperatures.cs" />
     <Page Include="Controls.xaml">
@@ -118,6 +121,10 @@
     <ProjectReference Include="..\HidLibrary\HidLibrary.csproj">
       <Project>{9e8f1d50-74ea-4c60-bd5c-ab2c5b53bc66}</Project>
       <Name>HidLibrary</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\owdotnet\OW.Net.csproj">
+      <Project>{ca428c0d-576c-4495-9bb2-35a505a3e053}</Project>
+      <Name>OW.Net</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

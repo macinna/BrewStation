@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BrewStation
 {
-    enum TemperatureProbes
+    public enum TemperatureProbes
     {
         HotLiquorTank,
         MashTun,

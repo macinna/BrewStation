@@ -14,6 +14,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.ComponentModel;
 using System.Threading;
+using System.Windows.Threading;
 using System.Collections.Concurrent;
 using ToggleSwitch;
 
@@ -26,30 +27,104 @@ namespace BrewStation
     {
         private bool hltRegulationRunning = false;
         private bool mtRegulationRunning = false;
+        private bool timerRunning = false;
+        private DispatcherTimer timer = null;
 
 
         private CancellationTokenSource HLTRegulatorCancellationTokenSource;
         private CancellationTokenSource MTRegulatorCancellationTokenSource;
 
+        private BackgroundWorker temperatureUpdateWorker = new BackgroundWorker();
+
+
+
         private Task HLTRegulatorTask;
         private Task MTRegulatorTask;
 
         private Temperatures kettleTemps = new Temperatures();
+        private string countDownTime;
+        private RelayController relayController;
+        private TemperatureReader temperatureReader;
+        private bool isInitialized = true;
+        private string hotLiquorTankSetPoint;
+        private string mashTunSetPoint;
 
         public MainWindow()
         {
 
             InitializeComponent();
 
-            if (!RelayController.InitializeRelays())
+            this.IsEnabled = false;
+
+
+            this.temperatureUpdateWorker.DoWork += temperatureUpdateWorker_DoWork;
+            this.temperatureUpdateWorker.ProgressChanged += temperatureUpdateWorker_ProgressChanged;
+            this.temperatureUpdateWorker.WorkerReportsProgress = true;
+
+            this.temperatureReader = new OneWireTemperatureReader();            
+            this.relayController = new TinyOSRelayController();
+
+
+            if (!this.relayController.Initialize())
             {
                 //relay initialization failure
                 //nothing should happen now.  
-                
+
+                this.statusBarText.Text = "Could not initialize relay controller.";
+                this.isInitialized = false;
+ 
             }
 
-            MonitorAndUpdateTemperatureDisplays();
-            
+
+            if (!this.temperatureReader.Initialize())
+            {
+                //couldn't initialize temp controllers
+                this.statusBarText.Text = "Could not initialize temperature probes.";
+                this.isInitialized = false;
+            }
+
+            if(this.isInitialized)
+            {
+                this.statusBarText.Text = "Ready";
+                //MonitorAndUpdateTemperatureDisplays();
+                this.temperatureUpdateWorker.RunWorkerAsync(this.temperatureReader);
+
+                this.IsEnabled = true;
+
+            }
+                
+        }
+
+  
+
+        void temperatureUpdateWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            int[] temps = (int[]) e.UserState;
+            this.kettleTemps.MashTunTemperature = temps[0];
+            this.kettleTemps.HotLiquorTankTemperature = temps[1];
+            this.kettleTemps.BoilKettleTemperature = temps[2];
+        
+        }
+
+        void temperatureUpdateWorker_DoWork(object sender, DoWorkEventArgs e)
+        {
+
+            TemperatureReader tempReader = (TemperatureReader)e.Argument;
+
+            int[] temps = new int[3];
+
+            while (true)
+            {
+                
+                temps[0] = tempReader.GetCurrentTemperature(TemperatureProbes.MashTun);
+                temps[1] = tempReader.GetCurrentTemperature(TemperatureProbes.HotLiquorTank);
+                temps[2] = tempReader.GetCurrentTemperature(TemperatureProbes.BoilKettle);
+
+                Thread.Sleep(1000);
+
+                this.temperatureUpdateWorker.ReportProgress(0, temps);
+
+            }
         }
 
         public Temperatures KettleTemperatures
@@ -59,28 +134,20 @@ namespace BrewStation
 
 
 
-        private void MonitorAndUpdateTemperatureDisplays()
-        {
-            Task task = Task.Factory.StartNew(() =>
-            {
-                while (true)
-                {
-                    
-                    this.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        kettleTemps.MashTunTemperature = TemperatrureUtil.GetCurrentTemperature(TemperatureProbes.MashTun);
-                        kettleTemps.HotLiquorTankTemperature = TemperatrureUtil.GetCurrentTemperature(TemperatureProbes.HotLiquorTank);
-                        kettleTemps.BoilKettleTemperature = TemperatrureUtil.GetCurrentTemperature(TemperatureProbes.BoilKettle);
-                    }), null);
-
-                    Thread.Sleep(1000);
-                }
-            });
-        }
-
-
         private void RegulateMashTunSwitch_Changed(object sender, RoutedEventArgs e)
         {
+
+            int setPoint = 0;
+
+            if (!int.TryParse(MashTunSetPoint.Text, out setPoint))
+            {
+                //no number provided.  don't do anything.
+                RegulateMashTunSwitch.IsChecked = false;
+                return;
+            }
+                
+
+
             //start process to regulate temperature of mt
 
             if (!mtRegulationRunning)
@@ -88,8 +155,7 @@ namespace BrewStation
                 MTRegulatorCancellationTokenSource = new CancellationTokenSource();
                 CancellationToken token = MTRegulatorCancellationTokenSource.Token;
 
-                int desiredTemp = Convert.ToInt32(MashTunSetPoint.Text);
-                MTRegulatorTask = Task.Factory.StartNew(() => RegulateTemperature(Kettles.MashTun, desiredTemp, token), token);
+                MTRegulatorTask = Task.Factory.StartNew(() => RegulateTemperature(Kettles.MashTun, setPoint, token), token);
 
                 MashTunBurnerSwitch.IsEnabled = false;
                 MashTunSetPoint.IsEnabled = false;
@@ -113,15 +179,26 @@ namespace BrewStation
 
         private void RegulateHotLiquorTankSwitch_Changed(object sender, RoutedEventArgs e)
         {
+
+
+            int setPoint = 0;
+
+            if (!int.TryParse(HotLiquorTankSetPoint.Text, out setPoint))
+            {
+                //no number provided.  don't do anything.
+                RegulateHotLiquorTankSwitch.IsChecked = false;
+                return;
+            }
+
             //start process to regulate temperature of hlt
 
             if (!hltRegulationRunning)
             {
+                this.statusBarText.Text = "Regulating HLT Temperature...";
                 HLTRegulatorCancellationTokenSource = new CancellationTokenSource();
                 CancellationToken token = HLTRegulatorCancellationTokenSource.Token;
                 
-                int desiredTemp = Convert.ToInt32(HotLiquorTankSetPoint.Text);
-                HLTRegulatorTask = Task.Factory.StartNew(() => RegulateTemperature(Kettles.HotLiquorTank, desiredTemp, token), token);
+                HLTRegulatorTask = Task.Factory.StartNew(() => RegulateTemperature(Kettles.HotLiquorTank, setPoint, token), token);
              
                 HotLiquorTankBurnerSwitch.IsEnabled = false;
                 HotLiquorTankSetPoint.IsEnabled = false;
@@ -130,6 +207,7 @@ namespace BrewStation
             }
             else
             {
+                this.statusBarText.Text = "Ready";
                 HLTRegulatorCancellationTokenSource.Cancel();
                 ConcurrentBag<Task> tasks = new ConcurrentBag<Task>();
                 tasks.Add(HLTRegulatorTask);
@@ -189,7 +267,7 @@ namespace BrewStation
                     if (currentTemp < target)
                     {
                         //Turn on the buner
-                        RelayController.CloseRelay(relay);
+                        this.relayController.CloseRelay(relay);
 
 
                         //update the UI
@@ -199,7 +277,7 @@ namespace BrewStation
                     else
                     {
                         //Turn off the buner
-                        RelayController.OpenRelay(relay);
+                        this.relayController.OpenRelay(relay);
                         this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = false), null);
                     }
 
@@ -216,7 +294,7 @@ namespace BrewStation
             finally
             {
                 //clean up by opening relays to turn off buner
-                RelayController.OpenRelay(relay);
+                this.relayController.OpenRelay(relay);
                 this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = false), null);
             }
 
@@ -226,18 +304,18 @@ namespace BrewStation
         private void MashTunBurnerSwitch_Changed(object sender, RoutedEventArgs e)
         {
             if (MashTunBurnerSwitch.IsChecked == true)
-                RelayController.CloseRelay(Relays.MashTunBurner);
+                this.relayController.CloseRelay(Relays.MashTunBurner);
             else
-                RelayController.OpenRelay(Relays.MashTunBurner);
+                this.relayController.OpenRelay(Relays.MashTunBurner);
         }
 
         private void HotLiquorTankBurnerSwitch_Changed(object sender, RoutedEventArgs e)
         {
             
             if (HotLiquorTankBurnerSwitch.IsChecked == true)
-                RelayController.CloseRelay(Relays.HotLiquorTankBurner);
+                this.relayController.CloseRelay(Relays.HotLiquorTankBurner);
             else
-                RelayController.OpenRelay(Relays.HotLiquorTankBurner);
+                this.relayController.OpenRelay(Relays.HotLiquorTankBurner);
 
         }
 
@@ -246,21 +324,93 @@ namespace BrewStation
 
 
             if (LeftPumpSwitch.IsChecked == true)
-                RelayController.CloseRelay(Relays.Pump1);
+                this.relayController.CloseRelay(Relays.Pump1);
             else
-                RelayController.OpenRelay(Relays.Pump1);
+                this.relayController.OpenRelay(Relays.Pump1);
 
         }
 
         private void RightPumpSwitch_Changed(object sender, RoutedEventArgs e)
         {
             if (RightPumpSwitch.IsChecked == true)
-                RelayController.CloseRelay(Relays.Pump2);
+                this.relayController.CloseRelay(Relays.Pump2);
             else
-                RelayController.OpenRelay(Relays.Pump2);
+                this.relayController.OpenRelay(Relays.Pump2);
 
         }
 
+        private void CountdownTimerStartButton_Click(object sender, RoutedEventArgs e)
+        {
+
+            int hours = int.Parse(String.IsNullOrEmpty(this.CountdownTimerTextBoxHours.Text) ? "0" : this.CountdownTimerTextBoxHours.Text);
+            int minutes = int.Parse(String.IsNullOrEmpty(this.CountdownTimerTextBoxMinutes.Text) ? "0" : this.CountdownTimerTextBoxMinutes.Text);
+            int seconds = int.Parse(String.IsNullOrEmpty(this.CountdownTimerTextBoxSeconds.Text) ? "0" : this.CountdownTimerTextBoxSeconds.Text);
+ 
+
+            if(this.timerRunning)
+            {
+                this.timer.Stop();
+                CountdownTimerTextBoxSeconds.IsEnabled = true;
+                CountdownTimerTextBoxMinutes.IsEnabled = true;
+                CountdownTimerTextBoxHours.IsEnabled = true;
+                CountdownTimerStartButton.Content = "Start";
+                this.timerRunning = false;
+                return;
+            }
+
+
+            CountdownTimerTextBoxSeconds.IsEnabled = false;
+            CountdownTimerTextBoxMinutes.IsEnabled = false;
+            CountdownTimerTextBoxHours.IsEnabled = false;
+
+            CountdownTimerStartButton.Content = "Stop";
+
+            TimeSpan time = new TimeSpan(hours, minutes, seconds);
+
+            timer = new DispatcherTimer(new TimeSpan(0, 0, 1), DispatcherPriority.Normal, delegate
+            {
+                CountdownTimerTextBoxHours.Text = time.Hours.ToString();
+                CountdownTimerTextBoxMinutes.Text = time.Minutes.ToString();
+                CountdownTimerTextBoxSeconds.Text = time.Seconds.ToString();
+
+                if (time == TimeSpan.Zero)
+                {
+                    timer.Stop();
+                    CountdownTimerTextBoxSeconds.IsEnabled = true;
+                    CountdownTimerTextBoxMinutes.IsEnabled = true;
+                    CountdownTimerTextBoxHours.IsEnabled = true;
+                    CountdownTimerStartButton.Content = "Start";
+                    this.timerRunning = false;
+                }
+                time = time.Add(TimeSpan.FromSeconds(-1)); 
+
+            }, Application.Current.Dispatcher);
+
+            timer.Start();
+            this.timerRunning = true;
+
+        }
+
+        private void CountdownTimerTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+
+            if ((e.Key <= Key.D9 && e.Key >= Key.D0) || (e.Key <= Key.NumPad9 && e.Key >= Key.NumPad0) || e.Key == Key.Delete || e.Key == Key.Back)
+            {
+                e.Handled = false;
+            }
+            else
+            {
+                e.Handled = true;
+            }
+            base.OnPreviewKeyDown(e);
+        }
+
+
+        private void _this_Closing(object sender, CancelEventArgs e)
+        {
+            //open all relays upon exit
+            this.relayController.OpenAllRelays();
+        }
 
     }
 }

@@ -10,24 +10,48 @@ using System.Diagnostics;
 
 namespace BrewStation
 {
-    class TemperatrureUtil
+    class USBTemperatureReader : TemperatureReader
     {
 
-        private static IEnumerable<HidLibrary.HidDevice> devices = null;
+        private IEnumerable<HidLibrary.HidDevice> devices = null;
 
-        public static int GetCurrentTemperature(TemperatureProbes probe)
+
+        public USBTemperatureReader()
         {
-            if(devices == null)
+        }
+
+
+        public override bool Initialize()
+        {
+            if (devices == null)
             {
                 devices = HidDevices.Enumerate(3141, 29697);
             }
 
             //if there aren't 6 devices (2 for each probe) then there is a problem
+            int counter = 0;
+            foreach (HidDevice device in devices)
+                counter++;
+
+            if (counter == 6)
+                return true;
+
+            return false;
+
+        }
 
 
+        public override int GetCurrentTemperature(TemperatureProbes probe)
+        {
+
+
+            if (devices == null)
+            {
+                this.Initialize();
+            }
+            
             lock (devices)
             {
-
                 int tempDeviceIndex = 1;
                 double scaleFactor = 1.0;
                 double offset = 1.0;
