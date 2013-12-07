@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using DalSemi.OneWire.Adapter;
 using DalSemi.OneWire;
 using DalSemi.OneWire.Container;
+using System.Configuration;
 
 
 namespace BrewStation
@@ -15,7 +16,7 @@ namespace BrewStation
 
         private const string HLT_TEMP_PROBE_ADDRESS = "6A000004EEE10828";
         private const string MT_TEMP_PROBE_ADDRESS = "C2000004EF544228";
-        private const string BK_TEMP_PROBE_ADDRESS = "B1000004EE81A128";
+        private const string BK_TEMP_PROBE_ADDRESS = "9B000004D0DDC128";
         
         private object lockObj = new Object();
         private DeviceContainerList owContainers = null;
@@ -79,7 +80,16 @@ namespace BrewStation
         {
             try
             {
-                PortAdapter adapter = AccessProvider.GetAdapter("{DS9097U}", "COM9");
+                System.Configuration.AppSettingsReader reader = new AppSettingsReader();
+                object port = reader.GetValue("OneWireTempSensorCOMPort", typeof(String));
+                string comPort =  port == null ? string.Empty : (string) port;
+
+                if(String.IsNullOrEmpty(comPort))
+                {
+                    return false;
+                }
+
+                PortAdapter adapter = AccessProvider.GetAdapter("{DS9097U}", "COM" + comPort);
                 this.owContainers = adapter.GetDeviceContainers();
 
                 int adapterCount = 0;

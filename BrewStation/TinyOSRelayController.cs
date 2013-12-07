@@ -99,6 +99,8 @@ namespace BrewStation
 
         private bool ModifyRelay(Relays relay, bool openRelay)
         {
+            if (String.IsNullOrEmpty(this.portName))
+                return false;
 
             lock(this.lockObj)
             {
