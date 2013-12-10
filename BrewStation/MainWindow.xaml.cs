@@ -17,6 +17,8 @@ using System.Threading;
 using System.Windows.Threading;
 using System.Collections.Concurrent;
 using ToggleSwitch;
+using System.IO;
+using System.Collections;
 
 namespace BrewStation
 {
@@ -49,11 +51,19 @@ namespace BrewStation
         private string hotLiquorTankSetPoint;
         private string mashTunSetPoint;
 
+        private string tempLogPath = null;
+        private string sysLogPath = null;
+
         public MainWindow()
         {
 
             InitializeComponent();
 
+
+            sysLogPath = "logs//" + "Sys-" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".log";
+
+            Directory.CreateDirectory("logs");
+                
             this.IsEnabled = false;
 
 
@@ -72,7 +82,7 @@ namespace BrewStation
 
                 this.statusBarText.Text = "Could not initialize relay controller.";
                 this.isInitialized = false;
- 
+                File.AppendAllText(sysLogPath, "Could not initialize relay controllers");
             }
 
 
@@ -92,14 +102,19 @@ namespace BrewStation
                 this.IsEnabled = true;
 
             }
-                
-        }
+
+       }
 
   
 
         void temperatureUpdateWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
             int[] temps = (int[]) e.UserState;
+
+            this.MashTunDial.Value = temps[0];
+            this.HotLiquorTankDial.Value = temps[1];
+            this.BoilKettleDial.Value = temps[2];
+            
             this.kettleTemps.MashTunTemperature = temps[0];
             this.kettleTemps.HotLiquorTankTemperature = temps[1];
             this.kettleTemps.BoilKettleTemperature = temps[2];
@@ -243,19 +258,145 @@ namespace BrewStation
                     break;
             }
 
+
             try
             {
+
+                string path = "logs//" + "Temp-" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv";
+                File.WriteAllText(path, "Time,HLTTemp,MTTemp");
+
+
+                double errSum = 0.0f;
+
+                //PID constants.  these need to be tweaked
+                double kp = 1.80, ki = 0.0, kd = 0.0;
+
+                //not sure what these should be set to. might need to be tweaked?
+                double pvMin = 70.0;
+                double pvMax = 170.0;
+                double outMin = 0.0;
+                double outMax = 1.0;
+
+                double lastPV = 0.0;
+                DateTime lastUpdate = DateTime.MinValue;
+
+
                 while (true)
                 {
                     cancelToken.ThrowIfCancellationRequested();
 
-                    //get temp from UI thread since it's already being monitored over there, 
-                    //and we'd like the timing of the regulator to match the temp in the UI
+
+                    // BEGIN PID IMPLEMENTATION
+
 
                     double currentTemp = 0.0;
 
                     this.Dispatcher.Invoke(new Action(() =>
                     {
+                        List<string> data = new List<string>(1);
+                        data.Add(String.Format("{0},{1},{2}", DateTime.Now.ToString(), kettleTemps.HotLiquorTankTemperature, kettleTemps.MashTunTemperature));
+
+                        File.AppendAllLines(path, data);
+
+                        if (probe == TemperatureProbes.HotLiquorTank)
+                            currentTemp = kettleTemps.HotLiquorTankTemperature;
+                        else
+                            currentTemp = kettleTemps.MashTunTemperature;
+
+                    }), null);
+
+
+
+                    double pv = currentTemp;
+                    double sp = target;
+
+                    //We need to scale the pv to +/- 100%, but first clamp it
+                    pv = Clamp(pv, pvMin, pvMax);
+                    pv = ScaleValue(pv, pvMin, pvMax, 0.0f, 1.0f);   
+
+                    //We also need to scale the setpoint
+                    sp = Clamp(sp, pvMin, pvMax);
+                    sp = ScaleValue(sp, pvMin, pvMax, 0.0f, 1.0f);
+
+                    //Now the error is in percent...
+                    double err = sp - pv;
+
+                    double pTerm = err * kp;
+                    double iTerm = 0.0f;
+                    double dTerm = 0.0f;
+
+                    double partialSum = 0.0f;
+                    DateTime nowTime = DateTime.Now;
+
+                    if (lastUpdate != DateTime.MinValue)
+                    {
+                        double dT = (nowTime - lastUpdate).TotalSeconds;
+
+                        //Compute the integral if we have to...
+                        if (pv >= pvMin && pv <= pvMax)
+                        {
+                            partialSum = errSum + dT * err;
+                            iTerm = ki * partialSum;
+                        }
+
+                        if (dT != 0.0f)
+                            dTerm = kd * (pv - lastPV) / dT;
+                    }
+
+                    lastUpdate = nowTime;
+                    errSum = partialSum;
+                    lastPV = pv;
+
+                    //Now we have to scale the output value to match the requested scale
+                    double outReal = pTerm + iTerm + dTerm;
+
+                    outReal = Clamp(outReal, 0.0f, 1.0f);
+                    outReal = ScaleValue(outReal, 0.0f, 1.0f, outMin, outMax);
+
+                    double cycleLength = 60000.0;  //one minute, in milliseconds
+
+
+                    int onTime = (int)(outReal * cycleLength);
+                    int offTime = (int)((1.0 - outReal) * cycleLength);
+
+                    if (onTime > 1000)
+                    {
+                        //Turn on the buner
+                        this.relayController.CloseRelay(relay);
+                        //update the UI
+                        this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = true), null);
+                        //sleep for the PID-determined portion of cycle
+                        Thread.Sleep(onTime);
+                    }
+                    
+                    if( offTime > 1000)
+                    { 
+                        //Turn off the buner for remainder of cycle
+                        this.relayController.OpenRelay(relay);
+                        //update the UI
+                        this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = false), null);
+                        //sleep for the PID-determined portion of cycle
+                        Thread.Sleep(offTime);
+                    }
+
+                    //END PID IMPLEMENTATION
+
+
+
+
+
+
+
+                    //get temp from UI thread since it's already being monitored over there, 
+                    //and we'd like the timing of the regulator to match the temp in the UI
+
+                    /*
+                    double currentTemp = 0.0;
+
+                    this.Dispatcher.Invoke(new Action(() =>
+                    {
+                        File.AppendAllText(tempLogPath, String.Format("{0},{1},{2}", DateTime.Now.ToString(), kettleTemps.HotLiquorTankTemperature, kettleTemps.MashTunTemperature));
+
                         if (probe == TemperatureProbes.HotLiquorTank)
                             currentTemp = kettleTemps.HotLiquorTankTemperature;
                         else
@@ -283,7 +424,7 @@ namespace BrewStation
 
                     Thread.Sleep(1000);
 
-
+                    */
                 }
             }
             catch
@@ -298,6 +439,25 @@ namespace BrewStation
                 this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = false), null);
             }
 
+        }
+
+        private double ScaleValue(double value, double valuemin, double valuemax, double scalemin, double scalemax)
+        {
+            double vPerc = (value - valuemin) / (valuemax - valuemin);
+            double bigSpan = vPerc * (scalemax - scalemin);
+
+            double retVal = scalemin + bigSpan;
+
+            return retVal;
+        }
+
+        private double Clamp(double value, double min, double max)
+        {
+            if (value > max)
+                return max;
+            if (value < min)
+                return min;
+            return value;
         }
 
 
@@ -410,6 +570,7 @@ namespace BrewStation
         {
             //open all relays upon exit
             this.relayController.OpenAllRelays();
+
         }
 
     }
