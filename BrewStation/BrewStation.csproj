@@ -141,6 +141,10 @@
       <Project>{ca428c0d-576c-4495-9bb2-35a505a3e053}</Project>
       <Name>OW.Net</Name>
     </ProjectReference>
+    <ProjectReference Include="..\PIDLibrary\PIDLibrary.csproj">
+      <Project>{47ff7121-d8b6-4e27-9f9e-402166b67305}</Project>
+      <Name>PIDLibrary</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">

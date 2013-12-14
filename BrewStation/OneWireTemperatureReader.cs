@@ -24,7 +24,7 @@ namespace BrewStation
         public OneWireTemperatureReader()
         { }
 
-        public override int GetCurrentTemperature(TemperatureProbes probe)
+        public override double GetCurrentTemperature(TemperatureProbes probe)
         {
             lock(this.lockObj)
             {
@@ -60,7 +60,7 @@ namespace BrewStation
                             double tempC = tempSensor.GetTemperature(state);
                             double tempF = tempC * 9.0 / 5.0 + 32;
 
-                            return (int)Math.Round(tempF, 0);
+                            return Math.Round(tempF, 1);
 
                         }
                     }

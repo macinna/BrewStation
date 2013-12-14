@@ -41,7 +41,7 @@ namespace BrewStation
         }
 
 
-        public override int GetCurrentTemperature(TemperatureProbes probe)
+        public override double GetCurrentTemperature(TemperatureProbes probe)
         {
 
 
@@ -104,7 +104,7 @@ namespace BrewStation
                             
 
                             //return in degrees farenheit rounded to nearest int
-                            return (int) Math.Round(tempF, 0);
+                            return Math.Round(tempF, 1);
                         }
                     }
                     counter++;

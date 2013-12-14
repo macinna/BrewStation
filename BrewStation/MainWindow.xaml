@@ -1,7 +1,7 @@
 ﻿<Window x:Class="BrewStation.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Controls" Height="656" Width="525"
+        Title="Controls" Height="764" Width="517"
         xmlns:db="clr-namespace:Codeplex.Dashboarding;assembly=Codeplex.Dashboarding" SizeToContent="WidthAndHeight"
         xmlns:ToggleSwitch="clr-namespace:ToggleSwitch;assembly=ToggleSwitch"
         x:Name="_this" FontFamily="Calibri" FontSize="12"
@@ -57,9 +57,9 @@
                                Margin="0,5"
                                Grid.Column="2"
                                Grid.Row="0"/>
-                    <db:Dial360 Grid.Column="0" Grid.Row="1" Minimum="50" Maximum="250" Value="{Binding ElementName=_this, Path=KettleTemperatures.BoilKettleTemperature}" Name="BoilKettleDial" />
-                    <db:Dial360 Grid.Column="1" Grid.Row="1" Minimum="50" Maximum="250" Value="{Binding ElementName=_this, Path=KettleTemperatures.MashTunTemperature}" Name="MashTunDial"/>
-                    <db:Dial360 Grid.Column="2" Grid.Row="1" Minimum="50" Maximum="250" Value="{Binding ElementName=_this, Path=KettleTemperatures.HotLiquorTankTemperature}" Name="HotLiquorTankDial"/>
+                    <db:Dial360 Grid.Column="0" Grid.Row="1" Minimum="50" Maximum="250" Value="0" Name="BoilKettleDial" />
+                    <db:Dial360 Grid.Column="1" Grid.Row="1" Minimum="50" Maximum="250" Value="0" Name="MashTunDial"/>
+                    <db:Dial360 Grid.Column="2" Grid.Row="1" Minimum="50" Maximum="250" Value="0" Name="HotLiquorTankDial"/>
                 </Grid>
             </GroupBox>
 
@@ -273,10 +273,10 @@
                         HorizontalContentAlignment="Right" 
                         PreviewKeyDown="CountdownTimerTextBox_PreviewKeyDown"/>
                     <Label VerticalAlignment="Bottom" FontSize="24">ss</Label>
-                    <Button Content="Start" Name="CountdownTimerStartButton" Click="CountdownTimerStartButton_Click" Margin="5" Height="30" Width="40" ></Button>                        
-                    
+                    <Button Content="Start" Name="CountdownTimerStartButton" Click="CountdownTimerStartButton_Click" Margin="5" Height="30" Width="40" ></Button>
+
                 </StackPanel>
-                
+
             </GroupBox>
 
         </Grid>

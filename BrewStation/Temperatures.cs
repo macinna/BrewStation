@@ -8,14 +8,14 @@ using System.ComponentModel;
 
 namespace BrewStation
 {
-    public class Temperatures : INotifyPropertyChanged 
+    public class Temperatures //: INotifyPropertyChanged 
     {
 
-        private int mashTunTemp;
-        private int hotLiquorTankTemp;
-        private int boilKettleTemp;
+        private double mashTunTemp;
+        private double hotLiquorTankTemp;
+        private double boilKettleTemp;
 
-        public int MashTunTemperature
+        public double MashTunTemperature
         {
             get
             {
@@ -24,12 +24,12 @@ namespace BrewStation
             set
             {
                 mashTunTemp = value;
-                OnPropertyChanged("MashTunTemperature");
+                //OnPropertyChanged("MashTunTemperature");
             }
 
         }
 
-        public int HotLiquorTankTemperature
+        public double HotLiquorTankTemperature
         {
             get
             {
@@ -38,12 +38,12 @@ namespace BrewStation
             set
             {
                 hotLiquorTankTemp = value;
-                OnPropertyChanged("HotLiquorTankTemperature");
+                //OnPropertyChanged("HotLiquorTankTemperature");
             }
 
         }
 
-        public int BoilKettleTemperature
+        public double BoilKettleTemperature
         {
             get
             {
@@ -52,18 +52,18 @@ namespace BrewStation
             set
             {
                 boilKettleTemp = value;
-                OnPropertyChanged("BoilKettleTemperature");
+                //OnPropertyChanged("BoilKettleTemperature");
             }
 
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        //public event PropertyChangedEventHandler PropertyChanged;
 
-        private void OnPropertyChanged(string propertyName)
-        {
-            if (PropertyChanged != null)
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+        //private void OnPropertyChanged(string propertyName)
+        //{
+        //    if (PropertyChanged != null)
+        //        PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 
-        }
+        //}
     }
 }

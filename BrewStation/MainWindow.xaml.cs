@@ -109,7 +109,7 @@ namespace BrewStation
 
         void temperatureUpdateWorker_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            int[] temps = (int[]) e.UserState;
+            double[] temps = (double[]) e.UserState;
 
             this.MashTunDial.Value = temps[0];
             this.HotLiquorTankDial.Value = temps[1];
@@ -126,7 +126,7 @@ namespace BrewStation
 
             TemperatureReader tempReader = (TemperatureReader)e.Argument;
 
-            int[] temps = new int[3];
+            double[] temps = new double[3];
 
             while (true)
             {
@@ -262,24 +262,41 @@ namespace BrewStation
             try
             {
 
-                string path = "logs//" + "Temp-" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv";
-                File.WriteAllText(path, "Time,HLTTemp,MTTemp");
-
-
-                double errSum = 0.0f;
 
                 //PID constants.  these need to be tweaked
-                double kp = 1.80, ki = 0.0, kd = 0.0;
+                double kp = 5, ki = 0.00015, kd = 30;
+                
+                string path = "logs//" + "Temp-" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv";
 
-                //not sure what these should be set to. might need to be tweaked?
-                double pvMin = 70.0;
-                double pvMax = 170.0;
-                double outMin = 0.0;
-                double outMax = 1.0;
+                List<string> headerData = new List<string>(1);
+                headerData.Add(String.Format("Time (Kp={0}; Ki={1}; Kd={2}),HLTTemp,MTTemp", kp, ki, kd));
+                File.AppendAllLines(path, headerData);
 
-                double lastPV = 0.0;
-                DateTime lastUpdate = DateTime.MinValue;
+                string dcPath = "logs//" + "DC-" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".csv";
+                headerData = new List<string>(1);
+                headerData.Add(String.Format("Time (Kp={0}; Ki={1}; Kd={2}),DC", kp, ki, kd));
+                File.AppendAllLines(dcPath, headerData);
 
+
+
+ 
+
+                /*
+                 *   when setting kp, to determine at what temp PID will start to process regulate:  
+                 *      StartTemp = SetPoint - (MaxOutput / kp)
+                 *      or for this application:
+                 *      StartTemp = SetPoint - (100 / kp)
+                 *      
+                 *      solving kp for a specific StartTemp:
+                 *          
+                 *          kp = 100 / (SetPoint - StartTemp)
+                 * 
+                 */
+
+                int cycleLength = 60000; //1 minute in millisecs
+                int outMax = 100;
+
+                PIDLibrary.PID pid = new PIDLibrary.PID(kp, ki, kd, target, cycleLength, 0, outMax);
 
                 while (true)
                 {
@@ -305,80 +322,34 @@ namespace BrewStation
 
                     }), null);
 
+                    double output = pid.Compute(Convert.ToInt64(currentTemp));
 
 
-                    double pv = currentTemp;
-                    double sp = target;
-
-                    //We need to scale the pv to +/- 100%, but first clamp it
-                    pv = Clamp(pv, pvMin, pvMax);
-                    pv = ScaleValue(pv, pvMin, pvMax, 0.0f, 1.0f);   
-
-                    //We also need to scale the setpoint
-                    sp = Clamp(sp, pvMin, pvMax);
-                    sp = ScaleValue(sp, pvMin, pvMax, 0.0f, 1.0f);
-
-                    //Now the error is in percent...
-                    double err = sp - pv;
-
-                    double pTerm = err * kp;
-                    double iTerm = 0.0f;
-                    double dTerm = 0.0f;
-
-                    double partialSum = 0.0f;
-                    DateTime nowTime = DateTime.Now;
-
-                    if (lastUpdate != DateTime.MinValue)
-                    {
-                        double dT = (nowTime - lastUpdate).TotalSeconds;
-
-                        //Compute the integral if we have to...
-                        if (pv >= pvMin && pv <= pvMax)
-                        {
-                            partialSum = errSum + dT * err;
-                            iTerm = ki * partialSum;
-                        }
-
-                        if (dT != 0.0f)
-                            dTerm = kd * (pv - lastPV) / dT;
-                    }
-
-                    lastUpdate = nowTime;
-                    errSum = partialSum;
-                    lastPV = pv;
-
-                    //Now we have to scale the output value to match the requested scale
-                    double outReal = pTerm + iTerm + dTerm;
-
-                    outReal = Clamp(outReal, 0.0f, 1.0f);
-                    outReal = ScaleValue(outReal, 0.0f, 1.0f, outMin, outMax);
-
-                    double cycleLength = 60000.0;  //one minute, in milliseconds
+                    //log duty cyle
+                    List<string> dcData = new List<string>(1);
+                    dcData.Add(String.Format("{0},{1}", DateTime.Now.ToString(), output));
+                    File.AppendAllLines(dcPath, dcData);
 
 
-                    int onTime = (int)(outReal * cycleLength);
-                    int offTime = (int)((1.0 - outReal) * cycleLength);
-
-                    if (onTime > 1000)
-                    {
+                    if(output > 0)
+                    { 
                         //Turn on the buner
                         this.relayController.CloseRelay(relay);
                         //update the UI
                         this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = true), null);
                         //sleep for the PID-determined portion of cycle
-                        Thread.Sleep(onTime);
+                        Thread.Sleep( (int) (cycleLength * output/100));
                     }
-                    
-                    if( offTime > 1000)
-                    { 
+
+                    if (output < 100)
+                    {
                         //Turn off the buner for remainder of cycle
                         this.relayController.OpenRelay(relay);
                         //update the UI
                         this.Dispatcher.BeginInvoke(new Action(() => burnerSwitch.IsChecked = false), null);
                         //sleep for the PID-determined portion of cycle
-                        Thread.Sleep(offTime);
+                        Thread.Sleep((int)(cycleLength * (1 - output / 100)));
                     }
-
                     //END PID IMPLEMENTATION
 
 

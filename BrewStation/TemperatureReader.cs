@@ -8,7 +8,7 @@ namespace BrewStation
 {
     public abstract class TemperatureReader
     {
-        public abstract int GetCurrentTemperature(TemperatureProbes probe);
+        public abstract double GetCurrentTemperature(TemperatureProbes probe);
 
         public abstract bool Initialize();
     }
